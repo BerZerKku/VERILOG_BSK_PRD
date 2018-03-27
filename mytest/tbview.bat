@@ -1,2 +1,0 @@
-gtkwave out.vcd
-:: comment
