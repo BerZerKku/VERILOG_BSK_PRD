@@ -66,41 +66,47 @@ module BskPRD # (
 	assign oComInd = ~com_ind;
 	
 	// чтение данных
-	always @ (iA or cs) begin : read_data
-		case(iA)
-			2'b00: begin
-				data_bus[03:00] <=  iCom[3:0];
-				data_bus[07:04] <= ~iCom[3:0];
-				data_bus[11:08] <=  iCom[7:4];
-				data_bus[15:12] <= ~iCom[7:4];
-			end
-			2'b01: begin
-				data_bus[03:00] <=  iCom[11:08];
-				data_bus[07:04] <= ~iCom[11:08];
-				data_bus[11:08] <=  iCom[15:12];
-				data_bus[15:12] <= ~iCom[15:12];
-			end
-			2'b10: begin
-				data_bus <= com_ind;
-			end
-			2'b11: begin
-				data_bus[0]    <= test_en; 
-		 		data_bus[7:1]  <= VERSION; 
-		 		data_bus[15:8] <= PASSWORD;  
-			end
-		endcase
-	end
-	
-	// запись данных	
-	always @ * begin : write_data
+	always @ (iA or cs or iRd or iWr) begin : data_rw
 		if (aclr) begin
 			test_en <= 1'b0;
 			com_ind <= 16'b0;
 		end
-		else if (cs && !iWr) begin
+		else if (cs) begin
 			case(iA)
-				2'b10: com_ind <= bD; 
-				2'b11: test_en <= bD[0];
+				2'b00: begin
+					if (iRd == 1'b0) begin
+						data_bus[03:00] <=  iCom[3:0];
+						data_bus[07:04] <= ~iCom[3:0];
+						data_bus[11:08] <=  iCom[7:4];
+						data_bus[15:12] <= ~iCom[7:4];
+					end
+				end
+				2'b01: begin
+					if (iRd == 1'b0) begin
+						data_bus[03:00] <=  iCom[11:08];
+						data_bus[07:04] <= ~iCom[11:08];
+						data_bus[11:08] <=  iCom[15:12];
+						data_bus[15:12] <= ~iCom[15:12];
+					end
+				end
+				2'b10: begin
+					if (iRd == 1'b0) begin
+						data_bus <= com_ind;
+					end
+					else if (iWr == 1'b0) begin
+						com_ind <= bD;
+					end
+				end
+				2'b11: begin
+					if (iRd == 1'b0) begin
+						data_bus[0]    <= test_en; 
+		 				data_bus[7:1]  <= VERSION; 
+		 				data_bus[15:8] <= PASSWORD; 
+					end
+					else if (iWr == 1'b0) begin
+						test_en <= bD[0];
+					end
+				end
 			endcase
 		end
 	end
@@ -119,5 +125,5 @@ module BskPRD # (
 			test_cnt <= test_cnt - 1'b1;
 		end	
 	end
-	
+
 endmodule
