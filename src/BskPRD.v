@@ -13,7 +13,7 @@ module BskPRD # (
 	input  wire [1:0] iA,		// шина адреса
 	input  wire [3:0] iCS,		// сигнал выбора микросхемы	
 	
-	input  wire [15:0] iCom,	// вход команд
+	input  reg  [15:0] iCom,	// вход команд
 	output wire [15:0] oComInd,	// выход индикации команд (активный 0)
 	output wire oCS,			// выход адреса микросхемы (активный 0)
 	output wire test			// тестовый сигнал (частота)
@@ -39,7 +39,7 @@ module BskPRD # (
 	wire cs = (iCS == CS);
 
 	// шина чтения / записи
-	wire [15:0] data_bus;
+	reg [15:0] data_bus;
 
 	// команды индикации
 	reg  [15:0] com_ind;	
@@ -49,10 +49,12 @@ module BskPRD # (
 		test_clk = 1'b0;
 		test_cnt = 1'b0;
 		com_ind  = 16'b0;
+		data_bus = 16'hAA;
 	end
 
 	// двунаправленная шина данных
-	assign bD = (iRd || !cs)? {16'bZ} : data_bus;  
+	// assign bD = (iRd || !cs) ? {16'bZ} : data_bus;  
+	assign bD = (iRd) ? 16'bZ : data_bus;  
 	
 	// Тестовый сигнал
 	assign test = (iBl && test_en) ? test_clk : 1'b0;	
@@ -60,11 +62,11 @@ module BskPRD # (
 	// Сигнал выбора микросхемы
 	assign oCS = !cs;
 
-	// Индикация команд
+	// индикация команд
 	assign oComInd = ~com_ind;
 	
 	// чтение данных
-	always @ (iA) begin : read_data
+	always @ (iA or cs) begin : read_data
 		case(iA)
 			2'b00: begin
 				data_bus[03:00] <=  iCom[3:0];
@@ -83,14 +85,14 @@ module BskPRD # (
 			end
 			2'b11: begin
 				data_bus[0]    <= test_en; 
-				data_bus[7:1]  <= VERSION; 
-				data_bus[15:8] <= PASSWORD;  
+		 		data_bus[7:1]  <= VERSION; 
+		 		data_bus[15:8] <= PASSWORD;  
 			end
 		endcase
 	end
 	
 	// запись данных	
-	always @ (aclr or cs or iWr) begin : write_data
+	always @ * begin : write_data
 		if (aclr) begin
 			test_en <= 1'b0;
 			com_ind <= 16'b0;

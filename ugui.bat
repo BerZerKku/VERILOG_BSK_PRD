@@ -1,1 +1,0 @@
-python utest.py --gui

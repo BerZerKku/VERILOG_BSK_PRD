@@ -13,10 +13,10 @@ ui = VUnit.from_argv()
 
 src_path = join(dirname(__file__), "src")
 
-uart_lib = ui.add_library("uart_lib")
-uart_lib.add_source_files(join(src_path, "*.v"))
+lib = ui.add_library("lib")
 
-tb_uart_lib = ui.add_library("tb_uart_lib")
-tb_uart_lib.add_source_files(join(src_path, "test", "*.sv"))
+lib.add_source_files(join(root, "src\\*.v"))
+lib.add_source_files(join(root, "src\\test\\*.sv"))
+
 
 ui.main()
