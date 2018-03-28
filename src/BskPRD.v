@@ -49,7 +49,7 @@ module BskPRD # (
 		test_clk = 1'b0;
 		test_cnt = 1'b0;
 		com_ind  = 16'b0;
-		data_bus = 16'hAA;
+		data_bus = 16'h0000;
 	end
 
 	// двунаправленная шина данных
@@ -66,51 +66,61 @@ module BskPRD # (
 	assign oComInd = ~com_ind;
 	
 	// чтение данных
-	always @ (iA or cs or iRd or iWr) begin : data_rw
+	always @ (cs or iA or iRd or iWr) begin : data_rw
 		if (aclr) begin
 			test_en <= 1'b0;
 			com_ind <= 16'b0;
 		end
 		else if (cs) begin
-			case(iA)
-				2'b00: begin
-					if (iRd == 1'b0) begin
-						data_bus[03:00] <=  iCom[3:0];
-						data_bus[07:04] <= ~iCom[3:0];
-						data_bus[11:08] <=  iCom[7:4];
-						data_bus[15:12] <= ~iCom[7:4];
-					end
-				end
-				2'b01: begin
-					if (iRd == 1'b0) begin
-						data_bus[03:00] <=  iCom[11:08];
-						data_bus[07:04] <= ~iCom[11:08];
-						data_bus[11:08] <=  iCom[15:12];
-						data_bus[15:12] <= ~iCom[15:12];
-					end
-				end
-				2'b10: begin
-					if (iRd == 1'b0) begin
-						data_bus <= com_ind;
-					end
-					else if (iWr == 1'b0) begin
-						com_ind <= bD;
-					end
-				end
-				2'b11: begin
-					if (iRd == 1'b0) begin
-						data_bus[0]    <= test_en; 
-		 				data_bus[7:1]  <= VERSION; 
-		 				data_bus[15:8] <= PASSWORD; 
-					end
-					else if (iWr == 1'b0) begin
-						test_en <= bD[0];
-					end
-				end
-			endcase
+			if (iRd == 1'b0) begin
+				data_bus = read(iA);
+			end
+			else if (iWr == 1'b0) begin
+				write(iA);
+			end
 		end
 	end
 	
+	// чтение данных 
+	function [15:0] read;
+	input [1:0] adr;
+	begin
+		case(adr)
+			2'b00: begin
+				read[03:00] =  iCom[3:0];
+				read[07:04] = ~iCom[3:0];
+				read[11:08] =  iCom[7:4];
+				read[15:12] = ~iCom[7:4];
+			end
+			2'b01: begin
+				read[03:00] =  iCom[11:08];
+				read[07:04] = ~iCom[11:08];
+				read[11:08] =  iCom[15:12];
+				read[15:12] = ~iCom[15:12];
+			end
+			2'b10: begin
+				read = com_ind;
+			end
+			2'b11: begin
+				read[0]    = test_en; 
+		 		read[7:1]  = VERSION; 
+		 		read[15:8] = PASSWORD; 
+			end
+		endcase
+	end
+	endfunction
+
+	// запись внутренних регистров
+	task write;
+	input [1:0] adr;
+	begin
+		case (adr)
+			2'b10: com_ind = bD;
+			2'b11: test_en = bD[0];
+		endcase
+	end
+	endtask
+ 
 	// формирование частоты для тестового сигнала
 	always @ (posedge clk or posedge aclr) begin : generate_test_clk
 		if (aclr) begin
