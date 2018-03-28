@@ -48,13 +48,12 @@ module BskPRD # (
 		test_en	 = 1'b0;
 		test_clk = 1'b0;
 		test_cnt = 1'b0;
-		com_ind  = 16'b0;
+		com_ind  = 16'h0000;
 		data_bus = 16'h0000;
 	end
 
 	// двунаправленная шина данных
-	// assign bD = (iRd || !cs) ? {16'bZ} : data_bus;  
-	assign bD = (iRd) ? 16'bZ : data_bus;  
+	assign bD = (iRd || !cs) ? 16'bZ : data_bus;  
 	
 	// Тестовый сигнал
 	assign test = (iBl && test_en) ? test_clk : 1'b0;	
@@ -66,18 +65,19 @@ module BskPRD # (
 	assign oComInd = ~com_ind;
 	
 	// чтение данных
-	always @ (cs or iA or iRd or iWr) begin : data_rw
-		if (aclr) begin
-			test_en <= 1'b0;
-			com_ind <= 16'b0;
-		end
-		else if (cs) begin
+	always @ (cs or iA or iRd or iWr or aclr) begin : data_rw
+		if (cs) begin
 			if (iRd == 1'b0) begin
-				data_bus = read(iA);
+				data_bus <= read(iA);
 			end
 			else if (iWr == 1'b0) begin
 				write(iA);
 			end
+		end
+
+		if (aclr) begin
+			test_en <= 1'b0;
+			com_ind <= 16'b0;
 		end
 	end
 	

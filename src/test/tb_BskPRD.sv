@@ -9,8 +9,11 @@
 // correctly installed (and your python run-script is correct).
 `include "vunit_defines.svh"
 
+`timescale 100ps/100ps
+
 module tb_BskPRD;
-   localparam integer clk_period = 500; // ns
+   localparam integer CLK_PERIOD = 500; // ns
+   localparam integer DATA_BUS_DEF = 16'h1234;
 
    localparam VERSION = 7'h25;
    localparam PASSWORD = 8'hA4;
@@ -32,62 +35,136 @@ module tb_BskPRD;
    wire oCS;            // выход адреса микросхемы (активный 0)
    wire test;           // тестовый сигнал (частота)
 
-   reg [15:0] data_bus;
+   reg [15:0] data_bus = DATA_BUS_DEF;
 
    assign bD = (iRd == 0'b0) ? 16'hZZZZ : data_bus; 
 
    `TEST_SUITE begin
+      integer tmp;
 
       `TEST_SUITE_SETUP begin
-         iCS = 4'b0000;
+         iCS = ~CS;
          iA = 2'b00;
          iBl = 1'b0;
          iRes = 1'b0;
          iWr = 1'b1;
          iRd = 1'b1;
-         iCom = 16'hAA55;
-         #(1ns);
+         iCom = 16'h1331;
+         #1
          $display("Running test suite setup code");
       end
 
-/*
+      // проверка CS
       `TEST_CASE("test_cs") begin : test_cs
          iCS = 4'b0000;
-         #(100ps);
+         #1;
          `CHECK_EQUAL(oCS, 1);
 
          iCS = 4'b1111;
-         #(100ps);
+         #1;
          `CHECK_EQUAL(oCS, 1);
 
          iCS = CS;
-         #(100ps);
+         #1;
          `CHECK_EQUAL(oCS, 0);
 
          iCS = 4'b1111;
-         #(100ps);
+         #1;
          `CHECK_EQUAL(oCS, 1);
       end
-*/
 
-      `TEST_CASE("test_read") begin : test_read
-         #(100ps);
+      // проверка чтения 
+      `TEST_CASE("test_read") begin : test_read  
+         // начальные установки
          iCS = CS;
-         iA = 2'b11;
-         iWr = 1'b1;
          iRd = 1'b0;
-         #(100ps);
-         `CHECK_EQUAL(oCS, 0);
-         $display("%h", bD);
+         iRes = 1'b1;
 
+         // проверка регистра 00
+         iA = 2'b00;
+         #1;
+         `CHECK_EQUAL(bD, 16'hC3E1); $display("bD = %h", bD);
+
+          // проверка регистра 01
          iA = 2'b01;
-         #(100ps);
-         $display("%h", bD);
+         #1;
+         `CHECK_EQUAL(bD, 16'hE1C3); $display("bD = %h", bD);
 
-         iCom = 16'h1111;
-         #(100ps);
-         $display("%h", bD);
-         `CHECK_EQUAL(bD, 16'hFF);
+         // проверка регистра 10
+         iA = 2'b10;
+         #1;
+         `CHECK_EQUAL(bD, 16'h0000); $display("bD = %h", bD);
+
+          // проверка регистра 11
+         iA = 2'b11;
+         #1;
+         tmp = (PASSWORD << 8) + (VERSION << 1) + 1'b0;
+         `CHECK_EQUAL(bD, tmp); $display("bD = %h", bD);
+
+         // проверка корректного считывания во время сброса 
+         iRes = 1'b0;
+         #1;
+         `CHECK_EQUAL(bD, tmp); $display("bD = %h", bD);
+
+         // проверка корректного считывания при наличии сигнала записи
+         iWr = 1'b0;
+         #1;
+         `CHECK_EQUAL(bD, tmp); $display("bD = %h", bD);
+
+         // проверка на отсутсвие сигнала чтения
+         iRd = 1'b1;
+         #1;
+         `CHECK_EQUAL(bD, DATA_BUS_DEF); $display("bD = %h", bD);
+
+         // проверка на отсутсвие сигнала cs
+         iRd = 1'b0;
+         iCS = ~CS;
+         #1;
+         `CHECK_EQUAL(bD, 16'hZZZZ); $display("bD = %h", bD);
+
+         // проверка корректного считывания еще раз
+         // проверка регистра 11
+         iCS = CS;
+         #1;
+         `CHECK_EQUAL(bD, tmp); $display("bD = %h", bD);
+      end
+
+      // проверка записи
+      `TEST_CASE("test_write") begin : test_write
+         // начальные установки
+         iCS = CS;
+         iRes = 1'b1;
+        
+         // проверка начальных данных
+         iRd = 1'b0;
+         iA = 2'b10;
+         #1
+         `CHECK_EQUAL(bD, 16'h0000); $display("bD = %h", bD);
+
+         iA = 2'b11;
+         #1
+         `CHECK_EQUAL(bD[0], 1'b0); $display("bD = %h", bD);
+
+         // проверка записи данных 
+         tmp = 0'h4321;
+         data_bus = tmp;
+         iRd = 1'b1;
+         iWr = 1'b0;
+
+         iA = 2'b10;
+         #1
+         iA = 2'b11;
+         #1
+         iRd = 1'b0;   // + проверка преобладания iRd над iWr
+         #1
+         `CHECK_EQUAL(bD[0], 1'b1); $display("bD = %h", bD);
+         iA = 2'b10;
+         #1
+         `CHECK_EQUAL(bD, tmp); $display("bD = %h", bD);
+
+         // проверка CS
+         iCS = ~CS;
+
 
 
       end
@@ -97,7 +174,7 @@ module tb_BskPRD;
    `WATCHDOG(1ms);
 
    always begin
-      #(clk_period/2 * 1ns);
+      #(CLK_PERIOD/2 * 1ns);
       clk <= !clk;
    end
 
