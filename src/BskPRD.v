@@ -32,18 +32,18 @@ module BskPRD # (
 	reg test_clk;	// сфорированная частота тестового сигнала
 	reg [TEST_CNT_WIDTH-1:0] test_cnt;	  
 
+	// шина чтения / записи
+	reg [15:0] data_bus;
+
+	// команды индикации
+	reg  [15:0] com_ind;
+
 	// сигнал сброса (активный 1)
 	wire aclr = !iRes;	
 
 	// сигнал выбора микросхемы (активный 1)
 	wire cs = (iCS == CS);
 
-	// шина чтения / записи
-	reg [15:0] data_bus;
-
-	// команды индикации
-	reg  [15:0] com_ind;	
-		
 	initial begin
 		test_en	 = 1'b0;
 		test_clk = 1'b0;
@@ -58,7 +58,7 @@ module BskPRD # (
 	// Тестовый сигнал
 	assign test = (iBl && test_en) ? test_clk : 1'b0;	
 	
-	// Сигнал выбора микросхемы
+	// сигнал выбора микросхемы (активный)
 	assign oCS = !cs;
 
 	// индикация команд
@@ -87,24 +87,18 @@ module BskPRD # (
 	begin
 		case(adr)
 			2'b00: begin
-				read[03:00] =  iCom[3:0];
-				read[07:04] = ~iCom[3:0];
-				read[11:08] =  iCom[7:4];
-				read[15:12] = ~iCom[7:4];
+				read[07:0] = (~iCom[3:0] << 4) + iCom[3:0];
+				read[15:8] = (~iCom[7:4] << 4) + iCom[7:4];
 			end
 			2'b01: begin
-				read[03:00] =  iCom[11:08];
-				read[07:04] = ~iCom[11:08];
-				read[11:08] =  iCom[15:12];
-				read[15:12] = ~iCom[15:12];
+				read[07:0] = (~iCom[11:8] << 4) + iCom[11:8];
+				read[15:8] = (~iCom[15:12] << 4) + iCom[15:12];
 			end
 			2'b10: begin
 				read = com_ind;
 			end
 			2'b11: begin
-				read[0]    = test_en; 
-		 		read[7:1]  = VERSION; 
-		 		read[15:8] = PASSWORD; 
+				read = (PASSWORD << 8) + (VERSION << 1) + test_en;
 			end
 		endcase
 	end
@@ -115,8 +109,8 @@ module BskPRD # (
 	input [1:0] adr;
 	begin
 		case (adr)
-			2'b10: com_ind = bD;
-			2'b11: test_en = bD[0];
+			2'b10: com_ind <= bD;
+			2'b11: test_en <= bD[0];
 		endcase
 	end
 	endtask

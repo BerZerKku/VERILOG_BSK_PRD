@@ -39,9 +39,12 @@ module tb_BskPRD;
 
    assign bD = (iRd == 0'b0) ? 16'hZZZZ : data_bus; 
 
-   `TEST_SUITE begin
-      integer tmp;
+   reg [15:0] tmp;
+   integer cnt;
 
+
+   `TEST_SUITE begin
+      
       `TEST_SUITE_SETUP begin
          iCS = ~CS;
          iA = 2'b00;
@@ -50,6 +53,7 @@ module tb_BskPRD;
          iWr = 1'b1;
          iRd = 1'b1;
          iCom = 16'h1331;
+         clk = 1'b0;
          #1
          $display("Running test suite setup code");
       end
@@ -83,89 +87,191 @@ module tb_BskPRD;
          // проверка регистра 00
          iA = 2'b00;
          #1;
-         `CHECK_EQUAL(bD, 16'hC3E1); $display("bD = %h", bD);
+         `CHECK_EQUAL(bD, 16'hC3E1); 
 
           // проверка регистра 01
          iA = 2'b01;
          #1;
-         `CHECK_EQUAL(bD, 16'hE1C3); $display("bD = %h", bD);
+         `CHECK_EQUAL(bD, 16'hE1C3); 
 
          // проверка регистра 10
          iA = 2'b10;
          #1;
-         `CHECK_EQUAL(bD, 16'h0000); $display("bD = %h", bD);
+         `CHECK_EQUAL(bD, 16'h0000); 
 
           // проверка регистра 11
          iA = 2'b11;
          #1;
          tmp = (PASSWORD << 8) + (VERSION << 1) + 1'b0;
-         `CHECK_EQUAL(bD, tmp); $display("bD = %h", bD);
+         `CHECK_EQUAL(bD, tmp); 
 
          // проверка корректного считывания во время сброса 
          iRes = 1'b0;
          #1;
-         `CHECK_EQUAL(bD, tmp); $display("bD = %h", bD);
+         `CHECK_EQUAL(bD, tmp); 
 
          // проверка корректного считывания при наличии сигнала записи
          iWr = 1'b0;
          #1;
-         `CHECK_EQUAL(bD, tmp); $display("bD = %h", bD);
+         `CHECK_EQUAL(bD, tmp); 
 
          // проверка на отсутсвие сигнала чтения
          iRd = 1'b1;
          #1;
-         `CHECK_EQUAL(bD, DATA_BUS_DEF); $display("bD = %h", bD);
+         `CHECK_EQUAL(bD, DATA_BUS_DEF); 
 
-         // проверка на отсутсвие сигнала cs
+         // проверка при неактивном CS
          iRd = 1'b0;
          iCS = ~CS;
          #1;
-         `CHECK_EQUAL(bD, 16'hZZZZ); $display("bD = %h", bD);
+         `CHECK_EQUAL(bD, 16'hZZZZ); 
 
          // проверка корректного считывания еще раз
          // проверка регистра 11
          iCS = CS;
          #1;
-         `CHECK_EQUAL(bD, tmp); $display("bD = %h", bD);
+         `CHECK_EQUAL(bD, tmp); 
       end
 
-      // проверка записи
       `TEST_CASE("test_write") begin : test_write
          // начальные установки
          iCS = CS;
          iRes = 1'b1;
         
-         // проверка начальных данных
+         // проверка начального состояния регистров
          iRd = 1'b0;
          iA = 2'b10;
          #1
-         `CHECK_EQUAL(bD, 16'h0000); $display("bD = %h", bD);
-
+         `CHECK_EQUAL(bD, 16'h0000); 
          iA = 2'b11;
          #1
-         `CHECK_EQUAL(bD[0], 1'b0); $display("bD = %h", bD);
+         `CHECK_EQUAL(bD[0], 1'b0); 
 
          // проверка записи данных 
-         tmp = 0'h4321;
+         tmp = 0'h9321;
          data_bus = tmp;
          iRd = 1'b1;
          iWr = 1'b0;
-
-         iA = 2'b10;
+         iA = 2'b10; // запись по адресу 0x02
          #1
-         iA = 2'b11;
+         iA = 2'b11; // запись по адресу 0x03
          #1
          iRd = 1'b0;   // + проверка преобладания iRd над iWr
+         data_bus = 16'h0000;
          #1
-         `CHECK_EQUAL(bD[0], 1'b1); $display("bD = %h", bD);
+         `CHECK_EQUAL(bD, (PASSWORD << 8) + (VERSION << 1) + 1'b1); 
          iA = 2'b10;
          #1
-         `CHECK_EQUAL(bD, tmp); $display("bD = %h", bD);
-
-         // проверка CS
+         `CHECK_EQUAL(bD, tmp);
+         
+         // проверка при неактивном CS
+         data_bus  = 0'h1516;
+         #1
          iCS = ~CS;
+         iRd = 1'b1;
+         #1
+         iRd = 1'b0;
+         iCS = CS;
+         #1
+         `CHECK_EQUAL(bD, tmp); 
 
+         // проверка очистки регистров при сбросе
+         iRes = 1'b0;
+         #1
+         `CHECK_EQUAL(bD, tmp); 
+         iA = 2'b11;
+         #1
+         `CHECK_EQUAL(bD, (PASSWORD << 8) + (VERSION << 1) + 1'b0);
+      end
 
+      `TEST_CASE("test_com_ind") begin : test_com_ind
+         // проверка начального состояния
+         `CHECK_EQUAL(oComInd, 16'hFFFF);
+
+         // начальные установки
+         data_bus = 16'h9231;
+         iCS = CS;
+         iA = 2'b10;
+
+         // проверка при установленном сигнале сброса
+         iWr = 1'b0;
+         #1
+         `CHECK_EQUAL(oComInd, 16'hFFFF);
+
+         // проверка в отсутсвии сигнала сброса
+         iRes = 1'b1;
+         #1
+         `CHECK_EQUAL(oComInd, ~data_bus);
+
+         // проверка в остутсвтии сигнала CS
+         iCS = ~CS;
+         #1
+         `CHECK_EQUAL(oComInd, ~data_bus);
+
+         // проверка влияния сигнала блокировки
+         iBl = 1'b1;
+         #1
+         `CHECK_EQUAL(oComInd, ~data_bus);
+         iBl = 1'b0;
+         #1
+         `CHECK_EQUAL(oComInd, ~data_bus);
+
+         // проверка сигнала сброса
+         iRes = 1'b0;
+         #1
+         `CHECK_EQUAL(oComInd, 16'hFFFF);
+      end
+
+      `TEST_CASE("test_test_signal") begin : test_test_signal
+         // проверка начального состояния
+         `CHECK_EQUAL(test, 1'b0); 
+         check_freq(tmp[0]);
+         `CHECK_EQUAL(tmp[0], 1'b0);
+
+         // проверка при отсутствии сигнала сброса
+         iRes = 1'b1;
+         #1
+         check_freq(tmp[0]);
+         `CHECK_EQUAL(test, 1'b0); 
+         `CHECK_EQUAL(tmp[0], 1'b0);
+
+         // проверка при сигнале блокировки
+         iBl = 1'b1;
+         #1
+         check_freq(tmp[0]);
+         `CHECK_EQUAL(test, 1'b0); 
+         `CHECK_EQUAL(tmp[0], 1'b0);
+
+         // проверка при установленном бите test_en
+         data_bus = 16'h0001;
+         iCS = CS;
+         iA = 2'b11;
+         iWr = 1'b0;
+         #1
+         check_freq(tmp[0]);
+         `CHECK_EQUAL(test, 1'b1); 
+         `CHECK_EQUAL(tmp[0], 1'b1);
+
+         // проверка при сигнале блокировки
+         iBl = 1'b0;
+         #1
+         check_freq(tmp[0]);
+         `CHECK_EQUAL(test, 1'b0); 
+         `CHECK_EQUAL(tmp[0], 1'b0);
+
+         // проверка при снятии сигнала блокировки
+         iBl = 1'b1;
+         #1
+         check_freq(tmp[0]);
+         `CHECK_EQUAL(test, 1'b1); 
+         `CHECK_EQUAL(tmp[0], 1'b1);
+
+         // проверка при подаче сигнала сброса
+         iRes = 1'b0;
+         #1
+         check_freq(tmp[0]);
+         `CHECK_EQUAL(test, 1'b0); 
+         `CHECK_EQUAL(tmp[0], 1'b0);
 
       end
 
@@ -173,10 +279,27 @@ module tb_BskPRD;
 
    `WATCHDOG(1ms);
 
-   always begin
-      #(CLK_PERIOD/2 * 1ns);
-      clk <= !clk;
+   // проверка делителя частоты
+   task check_freq;
+   output state;
+   begin
+      integer old;
+      integer cycle; 
+      integer div;
+
+      cnt = 0;
+      cycle = 24; // количество циклов проверки
+      div = 8;    // необходимый делитель частоты
+      for(integer i = 0; i < cycle; i++) begin
+         clk = ~clk;
+         old = test;
+         #1
+         cnt += (test != old);
+      end 
+      $display("%d", cnt);
+      state = (cnt == cycle/8);  
    end
+   endtask
 
    BskPRD #(.VERSION(VERSION), .PASSWORD(PASSWORD), .CS(CS)) dut(.*);
 
