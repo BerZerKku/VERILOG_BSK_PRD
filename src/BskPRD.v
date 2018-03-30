@@ -50,10 +50,7 @@ module BskPRD # (
 		test_cnt = 1'b0;
 		com_ind  = 16'h0000;
 		data_bus = 16'h0000;
-	end
-
-	// двунаправленная шина данных
-	assign bD = (iRd || !cs) ? 16'bZ : data_bus;  
+	end 
 	
 	// Тестовый сигнал
 	assign test = (iBl && test_en) ? test_clk : 1'b0;	
@@ -64,56 +61,47 @@ module BskPRD # (
 	// индикация команд
 	assign oComInd = ~com_ind;
 	
-	// чтение данных
-	always @ (cs or iA or iRd or iWr or aclr) begin : data_rw
-		if (cs) begin
-			if (iRd == 1'b0) begin
-				data_bus <= read(iA);
-			end
-			else if (iWr == 1'b0) begin
-				write(iA);
-			end
-		end
+	// сигнал выбора чтения (0) /запись (1)
+	assign rw = iRd && !iWr && cs;
 
-		if (aclr) begin
-			test_en <= 1'b0;
-			com_ind <= 16'b0;
+	// двунаправленная шина данных
+	assign bD = (iRd || !cs) ? 16'bZ : data_bus; 
+
+	// чтение данных 
+	always @ (rw or iA)	begin : data_read
+		if (!rw) begin
+			case(iA)
+				2'b00: begin
+					data_bus[07:0] = (~iCom[3:0] << 4) + iCom[3:0];
+					data_bus[15:8] = (~iCom[7:4] << 4) + iCom[7:4];
+				end
+				2'b01: begin
+					data_bus[07:0] = (~iCom[11:8] << 4) + iCom[11:8];
+					data_bus[15:8] = (~iCom[15:12] << 4) + iCom[15:12];
+				end
+				2'b10: begin
+					data_bus = com_ind;
+				end
+				2'b11: begin
+					data_bus = (PASSWORD << 8) + (VERSION << 1) + test_en;
+				end
+			endcase
 		end
 	end
-	
-	// чтение данных 
-	function [15:0] read;
-	input [1:0] adr;
-	begin
-		case(adr)
-			2'b00: begin
-				read[07:0] = (~iCom[3:0] << 4) + iCom[3:0];
-				read[15:8] = (~iCom[7:4] << 4) + iCom[7:4];
-			end
-			2'b01: begin
-				read[07:0] = (~iCom[11:8] << 4) + iCom[11:8];
-				read[15:8] = (~iCom[15:12] << 4) + iCom[15:12];
-			end
-			2'b10: begin
-				read = com_ind;
-			end
-			2'b11: begin
-				read = (PASSWORD << 8) + (VERSION << 1) + test_en;
-			end
-		endcase
-	end
-	endfunction
 
 	// запись внутренних регистров
-	task write;
-	input [1:0] adr;
-	begin
-		case (adr)
-			2'b10: com_ind <= bD;
-			2'b11: test_en <= bD[0];
-		endcase
+	always @ (rw or iA or aclr) begin : data_write
+		if (aclr) begin
+			com_ind <= 16'h0000;
+			test_en <= 1'b0;
+		end
+		else if (rw) begin
+			case (iA)
+				2'b10: com_ind <= bD;
+				2'b11: test_en <= bD[0];
+			endcase
+		end
 	end
-	endtask
  
 	// формирование частоты для тестового сигнала
 	always @ (posedge clk or posedge aclr) begin : generate_test_clk
