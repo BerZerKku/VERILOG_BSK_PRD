@@ -16,27 +16,40 @@ module BskPRD # (
 	input  reg  [15:0] iCom,	// вход команд
 	output wire [15:0] oComInd,	// выход индикации команд (активный 0)
 	output wire oCS,			// выход адреса микросхемы (активный 0)
-	output wire test			// тестовый сигнал (частота)
+	output wire oTest,			// тестовый сигнал (частота)
+
+	output wire [15:0] debug	// выход отладки
 );
 
 	// тактовая частота
 	localparam CLOCK_IN 	= 'd2_000_000;	
 
-	// параметры для формирования частоты тестового сигнала
-	localparam TEST_FREQ	= 'd250_000;					// частота тестового сигнала
-	localparam TEST_CNT_MAX = CLOCK_IN / TEST_FREQ / 2;		// счетчик делителя для получения тестового сигнала
-	localparam TEST_CNT_WIDTH = $clog2(TEST_CNT_MAX);		// количество бит для счетчика тестовго сигнала
+	// частота тестового сигнала
+	localparam TEST_FREQ	= 'd250_000;	
 
-	// регистры для формирования частоты тестового сигнала
+	// счетчик делителя для получения тестового сигнала				
+	localparam TEST_CNT_MAX = CLOCK_IN / TEST_FREQ / 2;
+
+	// количество бит для счетчика тестовго сигнала	
+	localparam TEST_CNT_WIDTH = $clog2(TEST_CNT_MAX);	
+
+	// разрешение передачи тестового сигнала (активный 1)
 	reg test_en;	// 1 - разрешение передачи сигнала на выход
-	reg test_clk;	// сфорированная частота тестового сигнала
+
+	// тестовый сигнал (частота)
+	reg test_clk;	
+
+	// счетчик для форимрования тестового сигнала
 	reg [TEST_CNT_WIDTH-1:0] test_cnt;	  
 
 	// шина чтения / записи
-	reg [15:0] data_bus;
+	wire [15:0] data_bus;
+
+	// команды
+	reg [15:0] com;
 
 	// команды индикации
-	reg  [15:0] com_ind;
+	reg [15:0] com_ind;
 
 	// сигнал сброса (активный 1)
 	wire aclr = !iRes;	
@@ -44,58 +57,65 @@ module BskPRD # (
 	// сигнал выбора микросхемы (активный 1)
 	wire cs = (iCS == CS);
 
+	// набор сигналов для считывания
+	wire [15:0] in0, in1, in3; 
+
 	initial begin
 		test_en	 = 1'b0;
 		test_clk = 1'b0;
 		test_cnt = 1'b0;
 		com_ind  = 16'h0000;
-		data_bus = 16'h0000;
+		com = 16'h0000;
 	end 
 	
 	// Тестовый сигнал
-	assign test = (iBl && test_en) ? test_clk : 1'b0;	
+	assign oTest = (iBl && test_en) ? test_clk : 1'b0;	
 	
-	// сигнал выбора микросхемы (активный)
+	// сигнал выбора микросхемы (активный 1)
 	assign oCS = !cs;
 
-	// индикация команд
+	// индикация команд 
 	assign oComInd = ~com_ind;
-	
-	// сигнал выбора чтения (0) /запись (1)
-	assign rw = iRd && !iWr && cs;
 
 	// двунаправленная шина данных
 	assign bD = (iRd || !cs) ? 16'bZ : data_bus; 
 
+	// набор сигналов для считывания с адреса 'b00
+	assign in0[7:0] = (~com[3:0] << 4) + com[3:0]; 
+	assign in0[15:8] = (~com[7:4] << 4) + com[7:4];
+
+	// набор сигналов для считывания с адреса 'b01
+	assign in1[7:0] = (~com[11:8] << 4) + com[11:8]; 
+	assign in1[15:8] = (~com[15:12] << 4) + com[15:12];
+
+	// набор сигналов для считывания c адреса 'b11
+	assign in3 = (PASSWORD << 8) + (VERSION << 1) + test_en;
+
+	// шина чтения
+	assign data_bus = (iA == 2'b00) ? in0 :
+					  (iA == 2'b01) ? in1 :
+					  (iA == 2'b10) ? com_ind : in3;
+					  				  	
+	// сигналы отладки
+	assign debug = 16'h0000;				  
+
 	// чтение данных 
-	always @ (rw or iA)	begin : data_read
-		if (!rw) begin
-			case(iA)
-				2'b00: begin
-					data_bus[07:0] = (~iCom[3:0] << 4) + iCom[3:0];
-					data_bus[15:8] = (~iCom[7:4] << 4) + iCom[7:4];
-				end
-				2'b01: begin
-					data_bus[07:0] = (~iCom[11:8] << 4) + iCom[11:8];
-					data_bus[15:8] = (~iCom[15:12] << 4) + iCom[15:12];
-				end
-				2'b10: begin
-					data_bus = com_ind;
-				end
-				2'b11: begin
-					data_bus = (PASSWORD << 8) + (VERSION << 1) + test_en;
-				end
-			endcase
+	always @ (cs or iRd  or iA or aclr)	begin : data_read
+		if (aclr) begin
+			com <= 16'h0000;
+		end
+		else begin
+			com <= iCom;
 		end
 	end
 
 	// запись внутренних регистров
-	always @ (rw or iA or aclr) begin : data_write
+	always @ (cs or iWr or iA or aclr) begin : data_write
 		if (aclr) begin
 			com_ind <= 16'h0000;
 			test_en <= 1'b0;
 		end
-		else if (rw) begin
+		else if (cs && !iWr) begin
 			case (iA)
 				2'b10: com_ind <= bD;
 				2'b11: test_en <= bD[0];

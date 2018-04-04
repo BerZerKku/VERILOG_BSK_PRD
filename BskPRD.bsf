@@ -103,9 +103,16 @@ applicable agreement for further details.
 	(port
 		(pt 208 80)
 		(output)
-		(text "test" (rect 0 0 14 12)(font "Arial" ))
-		(text "test" (rect 173 75 187 87)(font "Arial" ))
+		(text "oTest" (rect 0 0 22 12)(font "Arial" ))
+		(text "oTest" (rect 165 75 187 87)(font "Arial" ))
 		(line (pt 208 80)(pt 192 80)(line_width 1))
+	)
+	(port
+		(pt 208 96)
+		(output)
+		(text "debug[15..0]" (rect 0 0 47 12)(font "Arial" ))
+		(text "debug[15..0]" (rect 140 91 187 103)(font "Arial" ))
+		(line (pt 208 96)(pt 192 96)(line_width 3))
 	)
 	(port
 		(pt 208 32)
