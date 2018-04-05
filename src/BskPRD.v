@@ -115,7 +115,7 @@ module BskPRD # (
 			com_ind <= 16'h0000;
 			test_en <= 1'b0;
 		end
-		else if (cs) begin
+		else if (cs && iWr) begin
 			case (iA)
 				2'b10: com_ind <= bD;
 				2'b11: test_en <= bD[0];
