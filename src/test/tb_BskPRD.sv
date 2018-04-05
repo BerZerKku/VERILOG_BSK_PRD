@@ -153,28 +153,36 @@ module tb_BskPRD;
          iA = 2'b11; #1;
          `CHECK_EQUAL(bD[0], 1'b0); 
 
-         // проверка записи данных 
-         tmp = 0'h9321;
+         // проверка записи данных по адресу 2'b10 + проверка записи пр фронту iWr
+         iA = 2'b10;
+         tmp = 16'h1111;
          data_bus = tmp;
          iRd = 1'b1;
-         iWr = 1'b0;
-         iA = 2'b10; #1; // запись по адресу 0x02
-         
-         iA = 2'b11; #1;// запись по адресу 0x03
-         iRd = 1'b0;   // + проверка преобладания iRd над iWr
-         data_bus = 16'h0000; #1;
-         `CHECK_EQUAL(bD, (PASSWORD << 8) + (VERSION << 1) + 1'b1); 
-         iA = 2'b10; #1;  
+         iWr = 1'b0; #1; 
+         `CHECK_EQUAL(oComInd, 16'hFFFF); 
+         iWr = 1'b1; #1;   
+         `CHECK_EQUAL(oComInd, ~tmp); 
+         iRd = 1'b0; #1;
          `CHECK_EQUAL(bD, tmp);
+
+         // проверка записи данных по адресу 2'b11
+         iA = 2'b11;
+         data_bus = 16'h0001;
+         iRd = 1'b1;
+         iWr = 1'b0; #1; 
+         iWr = 1'b1; #1;
+         iRd = 1'b0; #1;
+         `CHECK_EQUAL(bD, (PASSWORD << 8) + (VERSION << 1) + 1'b1); 
          
          // проверка при неактивном CS
-         data_bus  = 0'h1516; #1;
-         iCS = ~CS;
-         iRd = 1'b1; #1;
-         `CHECK_EQUAL(bD, data_bus);
-         iRd = 1'b0;
+         data_bus  = 0'h1516; 
+         iA = 2'b10; #1;
+         iRd = 1'b1; iWr = 1'b0; 
+         iCS = ~CS; #1;
+         iWr = 1'b1; #1; 
          iCS = CS; #1;
-         `CHECK_EQUAL(bD, tmp); 
+         iRd = 1'b0; #1;
+         `CHECK_EQUAL(bD, tmp);
 
          // проверка очистки регистров при сбросе
          iRes = 1'b0; #1;
@@ -188,16 +196,23 @@ module tb_BskPRD;
          `CHECK_EQUAL(oComInd, 16'hFFFF);
 
          // начальные установки
-         data_bus = 16'h9231;
+         tmp = 16'h9231;
+         data_bus = tmp;
          iCS = CS;
-         iA = 2'b10;
+         iA = 2'b10; 
 
+         // проверка сброса
          // проверка при установленном сигнале сброса
          iWr = 1'b0; #1;
+         `CHECK_EQUAL(oComInd, 16'hFFFF);
+         iWr = 1'b1; #1;
          `CHECK_EQUAL(oComInd, 16'hFFFF);
 
          // проверка в отсутсвии сигнала сброса
          iRes = 1'b1; #1;
+         iWr = 1'b0; #1;
+         `CHECK_EQUAL(oComInd, 16'hFFFF);
+         iWr = 1'b1; #1;
          `CHECK_EQUAL(oComInd, ~data_bus);
 
          // проверка в остутсвтии сигнала CS
@@ -238,6 +253,7 @@ module tb_BskPRD;
          iCS = CS;
          iA = 2'b11;
          iWr = 1'b0; #1;
+         iWr = 1'b1; #1;
          check_freq(tmp[0]);
          `CHECK_EQUAL(oTest, 1'b1); 
          `CHECK_EQUAL(tmp[0], 1'b1);
