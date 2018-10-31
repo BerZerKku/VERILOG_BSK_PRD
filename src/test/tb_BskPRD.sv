@@ -275,6 +275,30 @@ module tb_BskPRD;
          check_freq(tmp[0]);
          `CHECK_EQUAL(oTest, 1'b0); 
          `CHECK_EQUAL(tmp[0], 1'b0);
+
+      	// проверка отключеннной тестовой цепи
+      	// т.е. реально проверки клеммником не происходит
+      	// сначала проверяется при test_en = 0, потом при test_en = 1
+      	iRes = 1'b1; #1;			
+      	iA = 2'b11;
+        data_bus = 16'h0000;
+        iWr = 1'b0; #1; 
+        iWr = 1'b1; #1;
+        iA = 2'b00; #1;
+        iRd = 1'b0; #1;
+        `CHECK_EQUAL(bD, 16'hC3E1); 
+        iA = 2'b01; #1;
+        `CHECK_EQUAL(bD, 16'hE1C3); 
+        iA = 2'b11; #1;
+        iRd = 1'b1; #1;
+        data_bus = 16'h0001;
+        iWr = 1'b0; #1; 
+        iWr = 1'b1; #1;
+        iRd = 1'b0; #1;
+        iA = 2'b00; #1;
+        `CHECK_EQUAL(bD, 16'hF0F0); 
+        iA = 2'b01; #1;
+        `CHECK_EQUAL(bD, 16'hF0F0); 
       end
 
    end;

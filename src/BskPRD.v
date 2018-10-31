@@ -92,8 +92,8 @@ module BskPRD # (
 	assign in3 = (PASSWORD << 8) + (VERSION << 1) + test_en;
 
 	// шина чтения
-	assign data_bus = (iA == 2'b00) ? in0 :
-					  (iA == 2'b01) ? in1 :
+	assign data_bus = (iA == 2'b00) ? ((test_en) ? (16'hF0F0) :in0) :
+					  (iA == 2'b01) ? ((test_en) ? (16'hF0F0) :in1) :
 					  (iA == 2'b10) ? com_ind : in3;
 					  				  	
 	// сигналы отладки
