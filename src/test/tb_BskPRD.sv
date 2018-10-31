@@ -14,10 +14,10 @@
 module tb_BskPRD;
    localparam integer CLK_PERIOD = 500; // ns
    localparam integer DATA_BUS_DEF = 16'h1234;
-
+   
    localparam VERSION = 7'h25;
-   localparam PASSWORD = 8'hA4;
    localparam CS = 4'b1011;
+   localparam CODE_BLOCK = 8'hA4;
 
 
    wire [15:0] bD;      // шина данных
@@ -96,7 +96,7 @@ module tb_BskPRD;
 
           // проверка регистра 11
          iA = 2'b11; #1;
-         tmp = (PASSWORD << 8) + (VERSION << 1) + 1'b0;
+         tmp = (CODE_BLOCK << 8) + (VERSION << 1) + 1'b0;
          `CHECK_EQUAL(bD, tmp); 
 
          // проверка влияния сигнала iA на чтение команд
@@ -172,7 +172,7 @@ module tb_BskPRD;
          iWr = 1'b0; #1; 
          iWr = 1'b1; #1;
          iRd = 1'b0; #1;
-         `CHECK_EQUAL(bD, (PASSWORD << 8) + (VERSION << 1) + 1'b1); 
+         `CHECK_EQUAL(bD, (CODE_BLOCK << 8) + (VERSION << 1) + 1'b1); 
          
          // проверка при неактивном CS
          data_bus  = 0'h1516; 
@@ -188,7 +188,7 @@ module tb_BskPRD;
          iRes = 1'b0; #1;
          `CHECK_EQUAL(bD, 16'h0000); 
          iA = 2'b11; #1;
-         `CHECK_EQUAL(bD, (PASSWORD << 8) + (VERSION << 1) + 1'b0);
+         `CHECK_EQUAL(bD, (CODE_BLOCK << 8) + (VERSION << 1) + 1'b0);
       end
 
       `TEST_CASE("test_com_ind") begin : test_com_ind
@@ -326,6 +326,5 @@ module tb_BskPRD;
    end
    endtask
 
-   BskPRD #(.VERSION(VERSION), .PASSWORD(PASSWORD), .CS(CS)) dut(.*);
-
+   BskPRD #(.VERSION(VERSION), .CS(CS)) dut(.*);
 endmodule

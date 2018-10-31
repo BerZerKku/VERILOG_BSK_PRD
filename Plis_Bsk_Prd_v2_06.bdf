@@ -355,19 +355,14 @@ applicable agreement for further details.
 		""
 		(type "PARAMETER_UNSIGNED_HEX")	)
 	(parameter
-		"PASSWORD"
-		"A4"
-		""
-		(type "PARAMETER_UNSIGNED_HEX")	)
-	(parameter
 		"CS"
-		"1011"
+		"1001"
 		""
 		(type "PARAMETER_UNSIGNED_BIN")	)
 	(drawing
 		(rectangle (rect 16 16 192 192))
 	)
-	(annotation_block (parameter)(rect 600 488 793 544))
+	(annotation_block (parameter)(rect 608 496 798 538))
 )
 (connector
 	(pt 560 768)

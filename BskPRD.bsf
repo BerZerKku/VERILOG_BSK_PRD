@@ -127,11 +127,6 @@ applicable agreement for further details.
 		""
 		(type "PARAMETER_UNSIGNED_BIN")	)
 	(parameter
-		"PASSWORD"
-		"10100100"
-		""
-		(type "PARAMETER_UNSIGNED_BIN")	)
-	(parameter
 		"CS"
 		"1011"
 		""

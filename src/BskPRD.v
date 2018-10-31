@@ -1,7 +1,6 @@
 module BskPRD # (
 	parameter [6:0]	VERSION 	= 7'h25,		// версия прошивки
-	parameter [7:0]	PASSWORD	= 8'hA4,		// пароль
-	parameter [3:0]	CS			= 4'b1011		// адрес микросхемы
+	parameter [3:0]	CS			= 4'b1011		// адрес микросхемы 4'b1011 1-16 команды, 4'b1001 17-32 команды
 ) (
 	inout  wire [15:0] bD,		// шина данных
 	input  wire iRd,			// сигнал чтения (активный 0)
@@ -26,7 +25,10 @@ module BskPRD # (
 
 	// частота тестового сигнала
 	localparam TEST_FREQ	= 'd250_000;	
-
+	
+	// код блока
+	localparam BLOCK_CODE = (CS == 4'b1011) ? 8'hA4 : (CS == 4'b1001) ? 8'hA5 : 8'h00;
+	
 	// счетчик делителя для получения тестового сигнала				
 	localparam TEST_CNT_MAX = CLOCK_IN / TEST_FREQ / 2;
 
@@ -66,6 +68,11 @@ module BskPRD # (
 		test_cnt = 1'b0;
 		com_ind  = 16'h0000;
 		com = 16'h0000;
+		
+		// проверка корректности CS
+		if ((CS != 4'b1011) && (CS != 4'b1001)) begin
+			$error("Error value CS : %b", CS);
+		end
 	end 
 	
 	// Тестовый сигнал
@@ -87,9 +94,9 @@ module BskPRD # (
 	// набор сигналов для считывания с адреса 'b01
 	assign in1[7:0] = (~com[11:8] << 4) + com[11:8]; 
 	assign in1[15:8] = (~com[15:12] << 4) + com[15:12];
-
+		
 	// набор сигналов для считывания c адреса 'b11
-	assign in3 = (PASSWORD << 8) + (VERSION << 1) + test_en;
+	assign in3 = (BLOCK_CODE << 8) + (VERSION << 1) + test_en;
 
 	// шина чтения
 	assign data_bus = (iA == 2'b00) ? ((test_en) ? (16'hF0F0) :in0) :
