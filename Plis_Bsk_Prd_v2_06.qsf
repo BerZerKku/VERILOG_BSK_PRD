@@ -94,7 +94,6 @@ set_location_assignment PIN_46 -to D[3]
 set_location_assignment PIN_45 -to D[2]
 set_location_assignment PIN_44 -to D[1]
 set_location_assignment PIN_42 -to D[0]
-set_global_assignment -name MISC_FILE "D:/Project/Programm/Plis/AlteraCPLD/Prd_v2.6/Plis_Bsk_Prd_v2_06.dpf"
 set_location_assignment PIN_21 -to COM[15]
 set_location_assignment PIN_20 -to COM[14]
 set_location_assignment PIN_19 -to COM[13]

@@ -82,9 +82,16 @@ applicable agreement for further details.
 	(port
 		(pt 0 160)
 		(input)
+		(text "unit" (rect 0 0 12 12)(font "Arial" ))
+		(text "unit" (rect 21 155 33 167)(font "Arial" ))
+		(line (pt 0 160)(pt 16 160)(line_width 1))
+	)
+	(port
+		(pt 0 176)
+		(input)
 		(text "iCom[15..0]" (rect 0 0 44 12)(font "Arial" ))
-		(text "iCom[15..0]" (rect 21 155 65 167)(font "Arial" ))
-		(line (pt 0 160)(pt 16 160)(line_width 3))
+		(text "iCom[15..0]" (rect 21 171 65 183)(font "Arial" ))
+		(line (pt 0 176)(pt 16 176)(line_width 3))
 	)
 	(port
 		(pt 208 48)
@@ -121,23 +128,7 @@ applicable agreement for further details.
 		(text "bD[15..0]" (rect 152 27 187 39)(font "Arial" ))
 		(line (pt 208 32)(pt 192 32)(line_width 3))
 	)
-	(parameter
-		"VERSION"
-		"0100101"
-		""
-		(type "PARAMETER_UNSIGNED_BIN")	)
-	(parameter
-		"PASSWORD"
-		"10100100"
-		""
-		(type "PARAMETER_UNSIGNED_BIN")	)
-	(parameter
-		"CS"
-		"1011"
-		""
-		(type "PARAMETER_UNSIGNED_BIN")	)
 	(drawing
 		(rectangle (rect 16 16 192 192)(line_width 1))
 	)
-	(annotation_block (parameter)(rect 224 -64 324 16))
 )

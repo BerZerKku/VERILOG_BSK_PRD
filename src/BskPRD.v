@@ -1,8 +1,4 @@
-module BskPRD # (
-	parameter [6:0]	VERSION 	= 7'h25,		// версия прошивки
-	parameter [7:0]	PASSWORD	= 8'hA4,		// пароль
-	parameter [3:0]	CS			= 4'b1011		// адрес микросхемы
-) (
+module BskPRD (
 	inout  wire [15:0] bD,		// шина данных
 	input  wire iRd,			// сигнал чтения (активный 0)
 	input  wire iWr,			// сигнал записи (активный 0)
@@ -12,6 +8,7 @@ module BskPRD # (
 	input  wire clk,			// тактовая частота
 	input  wire [1:0] iA,		// шина адреса
 	input  wire [3:0] iCS,		// сигнал выбора микросхемы	
+	input  wire unit,			// 
 	
 	input  reg  [15:0] iCom,	// вход команд
 	output wire [15:0] oComInd,	// выход индикации команд (активный 0)
@@ -20,12 +17,20 @@ module BskPRD # (
 
 	output wire [15:0] debug	// выход отладки
 );
+	// Версия прошивки
+	localparam [6:0] VERSION = 7'h25;	
+	
+	// Код микросхемы
+	localparam [3:0] CS = 4'b10x1; 
+	
+	// Код модуля
+	localparam [7:0] UNIT_CODE = 8'hA4;
 
 	// тактовая частота
-	localparam CLOCK_IN 	= 'd2_000_000;	
+	localparam CLOCK_IN = 'd2_000_000;	
 
 	// частота тестового сигнала
-	localparam TEST_FREQ	= 'd250_000;	
+	localparam TEST_FREQ = 'd250_000;	
 
 	// счетчик делителя для получения тестового сигнала				
 	localparam TEST_CNT_MAX = CLOCK_IN / TEST_FREQ / 2;
@@ -53,10 +58,12 @@ module BskPRD # (
 
 	// сигнал сброса (активный 1)
 	wire aclr = !iRes;	
-
+	
 	// сигнал выбора микросхемы (активный 1)
-	wire cs = (iCS == CS);
-
+	wire cs = (iCS[3:2] == CS[3:2]) && (iCS[1] != unit) && (iCS[0] == CS[0]);
+	
+	wire [7:0] unit_code  = UNIT_CODE + unit; 
+	
 	// набор сигналов для считывания
 	wire [15:0] in0, in1, in3; 
 
@@ -89,7 +96,7 @@ module BskPRD # (
 	assign in1[15:8] = (~com[15:12] << 4) + com[15:12];
 
 	// набор сигналов для считывания c адреса 'b11
-	assign in3 = (PASSWORD << 8) + (VERSION << 1) + test_en;
+	assign in3 = (unit_code << 8) + (VERSION << 1) + test_en;
 
 	// шина чтения
 	assign data_bus = (iA == 2'b00) ? in0 :

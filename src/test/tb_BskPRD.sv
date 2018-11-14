@@ -17,7 +17,9 @@ module tb_BskPRD;
 
    localparam VERSION = 7'h25;
    localparam PASSWORD = 8'hA4;
-   localparam CS = 4'b1011;
+   localparam CS_16_01 = 4'b1011;
+   localparam CS_32_17 = 4'b1001;
+   localparam UNIT = 1'b0;
 
 
    wire [15:0] bD;      // шина данных
@@ -29,6 +31,7 @@ module tb_BskPRD;
    reg clk;             // тактовая частота
    reg [1:0] iA;        // шина адреса
    reg [3:0] iCS;       // сигнал выбора микросхемы   
+   reg unit;
    
    reg  [15:0] iCom;    // вход команд
    wire [15:0] oComInd; // выход индикации команд (активный 0)
@@ -48,7 +51,7 @@ module tb_BskPRD;
    `TEST_SUITE begin
       
       `TEST_SUITE_SETUP begin
-         iCS = ~CS;
+         iCS = ~CS_16_01;
          iA = 2'b00;
          iBl = 1'b0;
          iRes = 1'b0;
@@ -56,6 +59,7 @@ module tb_BskPRD;
          iRd = 1'b1;
          iCom = 16'h1331;
          clk = 1'b0;
+         unit = 1'b0;
          #1;
          $display("Running test suite setup code");
       end
@@ -68,7 +72,27 @@ module tb_BskPRD;
          iCS = 4'b1111; #1;
          `CHECK_EQUAL(oCS, 1);
 
-         iCS = CS; #1;
+         iCS = CS_16_01; #1;
+         `CHECK_EQUAL(oCS, 0);
+
+         unit = 1'b1; #1;
+         `CHECK_EQUAL(oCS, 1);
+
+         iCS = CS_32_17; #1;
+         `CHECK_EQUAL(oCS, 0);
+
+         // нужна ли эта проверка ?!
+         unit = 1'bx; #1;
+         `CHECK_EQUAL(oCS, 1'bx);
+
+         // нужна ли эта проверка ?!
+         unit = 1'bz; #1;
+         `CHECK_EQUAL(oCS, 1'bx);
+
+         unit = 1'b0; #1;  
+         `CHECK_EQUAL(oCS, 1);
+
+         iCS = CS_16_01; #1;
          `CHECK_EQUAL(oCS, 0);
 
          iCS = 4'b1111; #1;
@@ -78,7 +102,7 @@ module tb_BskPRD;
       // проверка чтения 
       `TEST_CASE("test_read") begin : test_read  
          // начальные установки
-         iCS = CS;
+         iCS = CS_16_01;
          iRd = 1'b0;
          iRes = 1'b1;
 
@@ -117,9 +141,9 @@ module tb_BskPRD;
          // проверка влияния сигнала iCS на чтение команд
          iCom = 16'h1111; #1; 
          `CHECK_EQUAL(bD, 16'h0F0F);
-         iCS = ~CS; #1;
+         iCS = ~CS_16_01; #1;
          `CHECK_EQUAL(bD, 16'hZZZZ);
-         iCS = CS; #1;
+         iCS = CS_16_01; #1;
          `CHECK_EQUAL(bD, 16'hE1E1);
 
          // проверка влияния сигнала iRes на чтение команд
@@ -143,7 +167,7 @@ module tb_BskPRD;
 
       `TEST_CASE("test_write") begin : test_write
          // начальные установки
-         iCS = CS;
+         iCS = CS_16_01;
          iRes = 1'b1;
         
          // проверка начального состояния регистров
@@ -178,9 +202,9 @@ module tb_BskPRD;
          data_bus  = 0'h1516; 
          iA = 2'b10; #1;
          iRd = 1'b1; iWr = 1'b0; 
-         iCS = ~CS; #1;
+         iCS = ~CS_16_01; #1;
          iWr = 1'b1; #1; 
-         iCS = CS; #1;
+         iCS = CS_16_01; #1;
          iRd = 1'b0; #1;
          `CHECK_EQUAL(bD, tmp);
 
@@ -198,7 +222,7 @@ module tb_BskPRD;
          // начальные установки
          tmp = 16'h9231;
          data_bus = tmp;
-         iCS = CS;
+         iCS = CS_16_01;
          iA = 2'b10; 
 
          // проверка сброса
@@ -216,7 +240,7 @@ module tb_BskPRD;
          `CHECK_EQUAL(oComInd, ~data_bus);
 
          // проверка в остутсвтии сигнала CS
-         iCS = ~CS; #1;
+         iCS = ~CS_16_01; #1;
          `CHECK_EQUAL(oComInd, ~data_bus);
 
          // проверка влияния сигнала блокировки
@@ -250,7 +274,7 @@ module tb_BskPRD;
 
          // проверка при установленном бите test_en
          data_bus = 16'h0001;
-         iCS = CS;
+         iCS = CS_16_01;
          iA = 2'b11;
          iWr = 1'b0; #1;
          iWr = 1'b1; #1;
@@ -302,6 +326,6 @@ module tb_BskPRD;
    end
    endtask
 
-   BskPRD #(.VERSION(VERSION), .PASSWORD(PASSWORD), .CS(CS)) dut(.*);
+   BskPRD dut(.*);
 
 endmodule
