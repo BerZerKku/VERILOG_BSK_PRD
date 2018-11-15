@@ -150,9 +150,9 @@ module tb_BskPRD;
          iCom = 16'h7384; #1;
          `CHECK_EQUAL(bD, 16'hE1E1);
          iRes = 1'b0; #1; 
-         `CHECK_EQUAL(bD, 16'hF0F0); 
+         `CHECK_EQUAL(bD, 16'h0F0F); 
          iCom = 16'h1111; #1
-         `CHECK_EQUAL(bD, 16'hF0F0); 
+         `CHECK_EQUAL(bD, 16'h0F0F); 
          iRes = 1'b1; #1;
          `CHECK_EQUAL(bD, 16'hE1E1); 
 

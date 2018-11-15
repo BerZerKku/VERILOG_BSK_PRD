@@ -437,18 +437,8 @@ applicable agreement for further details.
 	(bus)
 )
 (connector
-	(pt 560 768)
-	(pt 560 720)
-	(bus)
-)
-(connector
 	(pt 528 720)
 	(pt 528 704)
-)
-(connector
-	(pt 592 720)
-	(pt 560 720)
-	(bus)
 )
 (connector
 	(pt 592 656)
@@ -461,4 +451,14 @@ applicable agreement for further details.
 (connector
 	(pt 528 704)
 	(pt 592 704)
+)
+(connector
+	(pt 560 768)
+	(pt 560 720)
+	(bus)
+)
+(connector
+	(pt 592 720)
+	(pt 560 720)
+	(bus)
 )

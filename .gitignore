@@ -1,6 +1,10 @@
-db/
-incremental_db/
-vunit_out/
+/db/
+/greybox_tmp/
+/incremental_db/
+/output_files/
+/simulation/
+/vunit_out/
+
 *.rpt
 *.done
 *.summary

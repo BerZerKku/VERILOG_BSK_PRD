@@ -15,7 +15,7 @@ src_path = join(dirname(__file__), "src")
 
 lib = ui.add_library("lib")
 
-lib.add_source_files(join(root, "src\\*.v"))
+lib.add_source_files(join(root, "src\\*.sv"))
 lib.add_source_files(join(root, "src\\test\\*.sv"))
 
 
